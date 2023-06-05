@@ -28,7 +28,7 @@ public class Worker : BackgroundService
                 SaslMechanism = SaslMechanism.Plain,
                 SaslUsername = "$ConnectionString",
                 SaslPassword = _config.GetConnectionString("EventHub"),
-                // EnableIdempotence = true,
+                EnableIdempotence = true,
                 CompressionType = CompressionType.None,
                 Acks = Acks.All,
                 LingerMs = 1,
