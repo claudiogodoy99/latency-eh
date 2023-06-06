@@ -71,8 +71,8 @@ public class Worker : BackgroundService
                     if (count % 1000 == 0)
                     {
                         _logger.LogInformation("{count}, {cur}, {min}, {max}, {avg}", count, cur, min, max, avg);
-                        min = 0;
-                        max = 0;
+                        min = double.MaxValue;
+                        max = double.MinValue;
                     }
                 }
                 catch (ConsumeException e)
