@@ -50,7 +50,7 @@ public class Worker : BackgroundService
                 {
                     producer.Produce(topic, message);
                     counter++;
-                    if (counter % 1000 == 0)
+                    if (counter % 5000 == 0)
                     {
                         producer.Flush();
                         sw.Stop();
