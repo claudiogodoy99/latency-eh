@@ -37,7 +37,7 @@ public class Worker : BackgroundService
                 SaslPassword = _config.GetConnectionString("EventHub"),
                 GroupId = Guid.NewGuid().ToString(),
                 AutoOffsetReset = AutoOffsetReset.Latest,
-                EnableAutoCommit = false,
+                EnableAutoCommit = true,
                 MaxPartitionFetchBytes = 1048576,
                 FetchWaitMaxMs = 10,
                 BrokerVersionFallback = "1.0.0",        //Event Hubs for Kafka Ecosystems supports Kafka v1.0+, a fallback to an older API will fail
@@ -71,6 +71,8 @@ public class Worker : BackgroundService
                     if (count % 1000 == 0)
                     {
                         _logger.LogInformation("{count}, {cur}, {min}, {max}, {avg}", count, cur, min, max, avg);
+                        min = 0;
+                        max = 0;
                     }
                 }
                 catch (ConsumeException e)
@@ -80,16 +82,6 @@ public class Worker : BackgroundService
                 catch (OperationCanceledException)
                 {
                 }
-            }
-
-            if (msg != null)
-            {
-                consumer.Commit(msg);
-                _logger.LogInformation("Commited offset {offset}", msg.TopicPartitionOffset.Offset.Value);
-            }
-            else
-            {
-                _logger.LogInformation("No message to commit");
             }
         }, stoppingToken);
     }
