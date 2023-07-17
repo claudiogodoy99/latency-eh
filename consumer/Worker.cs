@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 using Confluent.Kafka;
 
 namespace ConsumerQueue;
@@ -6,6 +9,12 @@ public class Worker : BackgroundService
 {
     private readonly ILogger<Worker> _logger;
     private readonly IConfiguration _config;
+    ConsumerConfig _consumerConfig;
+    public double Min = 0;
+    public double Max = 0;
+    public long Count = 0;
+
+    public List<double> DataSet = new List<double>();
 
     public Worker(ILogger<Worker> logger, IConfiguration config)
     {
@@ -19,14 +28,20 @@ public class Worker : BackgroundService
         return delay.TotalMilliseconds;
     }
 
+    private void AddToTrack(double delay)
+    {
+        DataSet.Add(delay);
+    }
+
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         return Task.Run(() =>
         {
-            var appSettings = _config.GetSection("AppSettings");
+            var appSettings =  _config.GetSection("AppSettings");
             var brokerList = appSettings["BrokerList"];
             var topic = appSettings["Topic"];
-            var config = new ConsumerConfig
+
+            _consumerConfig = new ConsumerConfig
             {
                 BootstrapServers = brokerList,
                 SecurityProtocol = SecurityProtocol.SaslSsl,
@@ -43,13 +58,13 @@ public class Worker : BackgroundService
                 BrokerVersionFallback = "1.0.0",        //Event Hubs for Kafka Ecosystems supports Kafka v1.0+, a fallback to an older API will fail
                                                         //Debug = "security,broker,protocol"    //Uncomment for librdkafka debugging information
             };
-            using var consumer = new ConsumerBuilder<int, string>(config).SetKeyDeserializer(Deserializers.Int32).SetValueDeserializer(Deserializers.Utf8).Build();
+            using var consumer = new ConsumerBuilder<int, string>(_consumerConfig).SetKeyDeserializer(Deserializers.Int32).SetValueDeserializer(Deserializers.Utf8).Build();
 
             consumer.Subscribe(topic);
             _logger.LogInformation("Consuming messages from topic: {topic}, broker(s): {brokerList}", topic, brokerList);
 
             _logger.LogInformation("count, cur, min, max, avg");
-            long count = 0;
+
             double min = double.MaxValue;
             double max = double.MinValue;
             double cur = 0;
@@ -63,14 +78,23 @@ public class Worker : BackgroundService
                 {
                     msg = consumer.Consume(10);
                     if (msg == null) continue;
+
                     cur = CalculateDelay(msg.Message.Timestamp);
-                    count++;
+                    AddToTrack(cur);
+
+                    Count++;
+
                     if (cur < min) min = cur;
                     if (cur > max) max = cur;
-                    avg = ((count - 1) * avg + cur) / count;
-                    if (count % 1000 == 0)
+
+                    if (min < Min) Min = min;
+                    if (max > Max) Max = max;
+
+                    avg = ((Count - 1) * avg + cur) / Count;
+
+                    if (Count % 1000 == 0)
                     {
-                        _logger.LogInformation("{count}, {cur}, {min}, {max}, {avg}", count, cur, min, max, avg);
+                        _logger.LogInformation("{Count}, {cur}, {min}, {max}, {avg}", Count, cur, min, max, avg);
                         min = double.MaxValue;
                         max = double.MinValue;
                     }
@@ -84,5 +108,46 @@ public class Worker : BackgroundService
                 }
             }
         }, stoppingToken);
+    }
+
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        double[] percentiles = CalculatePercentile(DataSet, 0.5, 0.95, 0.99);
+
+        _logger.LogInformation("Finishing Program");
+        _logger.LogInformation(@"Count, Min, Max, Media, 50th, 95th, 99th");
+        _logger.LogInformation($"{Count}, {Min}, {Max}, {percentiles[0]}, {percentiles[1]}, {percentiles[2]} ");
+
+        string Json = JsonSerializer.Serialize(_consumerConfig);
+
+        _logger.LogInformation("Configurações: ");
+        _logger.LogInformation(Json);
+
+        await Task.Delay(10);
+    }
+
+    // Should be sorted
+    private double[] CalculatePercentile(IEnumerable<double> entry, params double[] percentiles)
+    {
+        var elements = entry.OrderBy(x => x).ToArray();
+        int N = elements.Length;
+
+        for (int i = 0; i < percentiles.Length; i++)
+        {
+            double excelPercentile = percentiles[i];
+
+
+            double realIndex = excelPercentile * (elements.Length - 1);
+            int index = (int)realIndex;
+            double frac = realIndex - index;
+
+            if (index + 1 < elements.Length)
+                percentiles[i] = elements[index] * (1 - frac) + elements[index + 1] * frac;
+            else
+                percentiles[i] = elements[index];
+
+        }
+
+        return percentiles;
     }
 }

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json;
 
 using Confluent.Kafka;
 
@@ -23,43 +24,58 @@ public class Worker : BackgroundService
 
             var config = new ProducerConfig
             {
+                ConnectionsMaxIdleMs = 180000,
+                MetadataMaxAgeMs = 180000,
+
                 BootstrapServers = appSettings["BrokerList"],
-                SecurityProtocol = SecurityProtocol.SaslSsl,
-                SaslMechanism = SaslMechanism.Plain,
                 SaslUsername = "$ConnectionString",
                 SaslPassword = _config.GetConnectionString("EventHub"),
-                EnableIdempotence = true,
+
+                SecurityProtocol = SecurityProtocol.SaslSsl,
+                SaslMechanism = SaslMechanism.Plain,
+
                 CompressionType = CompressionType.None,
-                Acks = Acks.All,
-                LingerMs = 1,
-                BatchSize = 131072,
+                Acks = 0,
             };
+
             using var producer = new ProducerBuilder<int, string>(config).SetKeySerializer(Serializers.Int32).SetValueSerializer(Serializers.Utf8).Build();
             int counter = 0;
-            var topic = appSettings["Topic"];
             var message = new Message<int, string>
             {
                 Key = counter,
                 Value = new string('a', 1024),
             };
+
+            int limit = string.IsNullOrEmpty(appSettings["NumMessages"]) ? 100000 : Convert.ToInt32(appSettings["NumMessages"]);
+            var topic = appSettings["Topic"];
+            int mps = string.IsNullOrEmpty(appSettings["Mps"]) ? 1000 : Convert.ToInt32(appSettings["Mps"]);
+
+
             Stopwatch sw = new Stopwatch();
             sw.Start();
+
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
                     producer.Produce(topic, message);
                     counter++;
-                    if (counter % 5000 == 0)
+
+                    if (counter % mps == 0)
                     {
                         producer.Flush();
                         sw.Stop();
                         int remaining = 1000 - (int)sw.ElapsedMilliseconds;
-                        _logger.LogInformation("Produced {counter} messages, sleeping {remaining}ms", counter, remaining);
-                        if (remaining > 0) {
+
+                        _logger.LogInformation($"Produced {counter} messages, sleeping {remaining}ms");
+
+                        if (remaining > 0)
+                        {
                             await Task.Delay(remaining);
                         }
                         sw.Restart();
+
+                        if (counter >= limit) stoppingToken.ThrowIfCancellationRequested();
                     }
                 }
                 catch (ProduceException<int, string> ex)
@@ -67,9 +83,16 @@ public class Worker : BackgroundService
                     _logger.LogError(ex, null);
                     producer.Flush();
                 }
-                catch (OperationCanceledException) {
+                catch (OperationCanceledException)
+                {
                 }
             }
+
+            string Json = JsonSerializer.Serialize(config);
+
+            _logger.LogInformation("Configurações: ");
+            _logger.LogInformation(Json);
+
         }, stoppingToken);
     }
 }
