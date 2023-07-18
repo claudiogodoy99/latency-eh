@@ -3,23 +3,19 @@
 Comandos para criar uma VM com um interface acelerada.
 
 ```
-az network public-ip create --name pip-accelerated-1 --resource-group Rg-B3-Godoy
 
-az network nic create --resource-group Rg-B3-Godoy --name nic-accelerated-1 --vnet-name vm-eastus-godoy-vnet --subnet default --accelerated-networking true --public-ip-address pip-accelerated-1 --network-security-group vm-eastus-godoy-nsg
+az network vnet create --resource-group [RGNAME] --name [VNET-NAME] --address-prefix 192.168.0.0/16 --subnet-name default --subnet-prefix 192.168.1.0/24
 
-az vm create --resource-group Rg-B3-Godoy --name vm-producer-linux --image UbuntuLTS --size Standard_DS4_v2 --admin-username claudio --generate-ssh-keys --nics nic-accelerated-1 --admin-password Carroloco99@
+az network nsg create --resource-group [RGNAME] --name [NSG-NAME]
 
-When specifying an existing NIC, do not specify accelerated networking. Ignore --accelerated-networking now. This will trigger an error instead of a warning in future releases.
-
+az network nsg rule create --resource-group [RGNAME] --nsg-name [NSG-NAME] --name Allow-SSH-Internet --access Allow --protocol Tcp --direction Inbound --priority 100 --source-address-prefix Internet --source-port-range "*" --destination-address-prefix "*" --destination-port-range 22
 
 
-```
+az network public-ip create --name [PUBLIC-IP-NAME] --resource-group Rg-B3-Godoy
 
-Conectar:
+az network nic create --resource-group Rg-B3-Godoy --name [INTERFACE-NAME] --vnet-name [VN-NAME] --subnet default --accelerated-networking true --public-ip-address [PUBLIC-IP-NAME] --network-security-group [NSG-NAME]
 
-```dotnetcli
-
-ssh claudio@20.228.150.72|4.246.158.114
+az vm create --resource-group [RGNAME] --name [VM-NAME] --image UbuntuLTS --size Standard_DS4_v2 --admin-username [ADM-NAME] --generate-ssh-keys --nics [INTERFACE-NAME] --admin-password [PASSWORD]
 ```
 
 Instalar .NET:
@@ -31,4 +27,10 @@ rm packages-microsoft-prod.deb
 
 sudo apt-get update && \
   sudo apt-get install -y dotnet-sdk-6.0
+```
+
+Instalar GitHub:
+
+```ssh
+sudo apt-get install git-all
 ```

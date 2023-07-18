@@ -54,7 +54,7 @@ public class Worker : BackgroundService
                 AutoOffsetReset = AutoOffsetReset.Latest,
                 EnableAutoCommit = true,
                 MaxPartitionFetchBytes = 1048576,
-                FetchWaitMaxMs = 10,
+                FetchWaitMaxMs = 100,
                 BrokerVersionFallback = "1.0.0",        //Event Hubs for Kafka Ecosystems supports Kafka v1.0+, a fallback to an older API will fail
                                                         //Debug = "security,broker,protocol"    //Uncomment for librdkafka debugging information
             };
@@ -110,12 +110,12 @@ public class Worker : BackgroundService
         }, stoppingToken);
     }
 
-    public override async Task StopAsync(CancellationToken cancellationToken)
+    public override Task StopAsync(CancellationToken cancellationToken)
     {
-        double[] percentiles = CalculatePercentile(DataSet, 0.5, 0.95, 0.99);
+        double[] percentiles = CalculatePercentile(DataSet, 0.75, 0.95, 0.99);
 
         _logger.LogInformation("Finishing Program");
-        _logger.LogInformation(@"Count, Min, Max, Media, 50th, 95th, 99th");
+        _logger.LogInformation(@"Count, Min, Max, Media, 75th, 95th, 99th");
         _logger.LogInformation($"{Count}, {Min}, {Max}, {percentiles[0]}, {percentiles[1]}, {percentiles[2]} ");
 
         string Json = JsonSerializer.Serialize(_consumerConfig);
@@ -123,7 +123,7 @@ public class Worker : BackgroundService
         _logger.LogInformation("Configurações: ");
         _logger.LogInformation(Json);
 
-        await Task.Delay(10);
+        return Task.CompletedTask;
     }
 
     // Should be sorted

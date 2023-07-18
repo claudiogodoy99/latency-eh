@@ -1,5 +1,0 @@
-C:\Users\claudiogodoy\OneDrive - Microsoft\Desktop\repos\B3\event-hub\latencia\consumerQueue\obj\Debug\net7.0\consumerQueue.csproj.AssemblyReference.cache
-C:\Users\claudiogodoy\OneDrive - Microsoft\Desktop\repos\B3\event-hub\latencia\consumerQueue\obj\Debug\net7.0\consumerQueue.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\claudiogodoy\OneDrive - Microsoft\Desktop\repos\B3\event-hub\latencia\consumerQueue\obj\Debug\net7.0\consumerQueue.AssemblyInfoInputs.cache
-C:\Users\claudiogodoy\OneDrive - Microsoft\Desktop\repos\B3\event-hub\latencia\consumerQueue\obj\Debug\net7.0\consumerQueue.AssemblyInfo.cs
-C:\Users\claudiogodoy\OneDrive - Microsoft\Desktop\repos\B3\event-hub\latencia\consumerQueue\obj\Debug\net7.0\consumerQueue.csproj.CoreCompileInputs.cache
