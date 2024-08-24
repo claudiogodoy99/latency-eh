@@ -53,8 +53,9 @@ public class Worker : BackgroundService
                 GroupId = Guid.NewGuid().ToString(),
                 AutoOffsetReset = AutoOffsetReset.Latest,
                 EnableAutoCommit = true,
-                MaxPartitionFetchBytes = 1048576,
-                FetchWaitMaxMs = 10,
+                MaxPartitionFetchBytes = int.Parse(appSettings["MaxPartitionFetchBytes"]),
+                FetchWaitMaxMs = int.Parse(appSettings["FetchWaitMaxMs"]),
+                FetchMaxBytes = int.Parse(appSettings["FetchMaxBytes"]),
                 BrokerVersionFallback = "1.0.0",        //Event Hubs for Kafka Ecosystems supports Kafka v1.0+, a fallback to an older API will fail           //Debug = "security,broker,protocol"    //Uncomment for librdkafka debugging information
             };
             using var consumer = new ConsumerBuilder<int, string>(_consumerConfig).SetKeyDeserializer(Deserializers.Int32).SetValueDeserializer(Deserializers.Utf8).Build();

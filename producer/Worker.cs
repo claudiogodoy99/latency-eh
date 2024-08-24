@@ -36,9 +36,9 @@ public class Worker : BackgroundService
 
                 CompressionType = CompressionType.None,
                 Acks = 0,
-                
-                LingerMs = 0,
-                SocketNagleDisable = true
+                LingerMs = Double.Parse(appSettings["LingerMS"]),
+                BatchSize = int.Parse(appSettings["BatchZize"]),
+                SocketNagleDisable = bool.Parse(appSettings["SocketNagleDisable"]),
             };
 
             using var producer = new ProducerBuilder<int, string>(config).SetKeySerializer(Serializers.Int32).SetValueSerializer(Serializers.Utf8).Build();
